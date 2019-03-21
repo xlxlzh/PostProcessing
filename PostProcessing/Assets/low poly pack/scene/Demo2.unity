@@ -461,8 +461,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 042bda0d454042e4394e52263ff8055a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _enableEdgeDectection: 1
+  _enableEdgeDectection: 0
   _edgeColor: {r: 0, g: 0, b: 0, a: 0}
+  _fogMode: 2
+  _fogColor: {r: 1, g: 1, b: 1, a: 1}
+  _fogStart: 0
+  _fogEnd: 49.8
+  _fogIntensity: 0.08
 --- !u!1001 &59469058
 PrefabInstance:
   m_ObjectHideFlags: 0
