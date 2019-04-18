@@ -23,8 +23,24 @@ public class UberPostProcessing : PostProcessingBase
     public float _fogEnd = 10.0f;
     public float _fogIntensity = 1.0f;
 
+    [Header("Bloom")]
+    [Range(0, 10)]
+    public float _intensity = 1;
+
+    [Range(0, 10)]
+    public float _threshold = 1;
+
+    [Range(0, 1)]
+    public float _softThreshold = 0.5f;
+
+    [Range(1, 16)]
+    public int _iterations = 4;
+
     private Shader _uberShader;
+    private Shader _bloomShader;
+    private Material _bloomMaterial;
     private Material _uberMaterial;
+    private RenderTexture[] _textures = new RenderTexture[16];
 
     private void OnEnable()
     {
@@ -42,6 +58,7 @@ public class UberPostProcessing : PostProcessingBase
     private void InitShaders()
     {
         _uberShader = Shader.Find("XlXlZh/Uber");
+        _bloomShader = Shader.Find("XlXlZh/Bloom");
     }
 
     private bool NeedDepthTexture()
@@ -90,6 +107,7 @@ public class UberPostProcessing : PostProcessingBase
             return;
 
         _uberMaterial = CheckShaderAndCreateMaterial(_uberShader, _uberMaterial);
+        _bloomMaterial = CheckShaderAndCreateMaterial(_bloomShader, _bloomMaterial);
 
         Shader.SetGlobalColor("_EdgeColor", _edgeColor);
         ChangeKeywords("EDGE_DECTECTION", _enableEdgeDectection);
@@ -101,6 +119,50 @@ public class UberPostProcessing : PostProcessingBase
     {
         PrepareMaterial();
 
-        Graphics.Blit(source, destination, _uberMaterial, 0);
+        float knee = _threshold * _softThreshold;
+        Vector4 filter;
+        filter.x = _threshold;
+        filter.y = filter.x - knee;
+        filter.z = 2f * knee;
+        filter.w = 0.25f / (knee + 0.00001f);
+        _bloomMaterial.SetVector("_Filter", filter);
+        _bloomMaterial.SetFloat("_Intensity", Mathf.GammaToLinearSpace(_intensity));
+
+        int width = source.width / 2;
+        int height = source.height / 2;
+        RenderTextureFormat fmt = source.format;
+
+        //Down Samples
+        RenderTexture currentDestination = _textures[0] = RenderTexture.GetTemporary(width, height, 0, fmt);
+        Graphics.Blit(source, currentDestination, _bloomMaterial, 0);
+
+        RenderTexture currentSource = currentDestination;
+        int index = 1;
+        for(; index < _iterations; ++index)
+        {
+            width /= 2;
+            height /= 2;
+
+            if (height < 2)
+                break;
+
+            currentDestination = _textures[index] = RenderTexture.GetTemporary(width, height, 0, fmt);
+            Graphics.Blit(currentSource, currentDestination, _bloomMaterial, 1);
+            currentSource = currentDestination;
+        }
+
+        //Up Samples
+        for (index -=2; index >= 0; --index)
+        {
+            currentDestination = _textures[index];
+            _textures[index] = null;
+            Graphics.Blit(currentSource, currentDestination, _bloomMaterial, 2);
+            RenderTexture.ReleaseTemporary(currentSource);
+            currentSource = currentDestination;
+        }
+
+        Shader.SetGlobalTexture("_SourceTex", source);
+
+        Graphics.Blit(source, destination, _bloomMaterial, 3);
     }
 }

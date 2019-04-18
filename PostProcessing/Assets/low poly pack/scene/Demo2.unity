@@ -428,7 +428,7 @@ Camera:
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
   m_TargetEye: 3
-  m_HDR: 0
+  m_HDR: 1
   m_AllowMSAA: 1
   m_AllowDynamicResolution: 0
   m_ForceIntoRT: 0
@@ -463,11 +463,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _enableEdgeDectection: 0
   _edgeColor: {r: 0, g: 0, b: 0, a: 0}
-  _fogMode: 2
+  _fogMode: 0
   _fogColor: {r: 1, g: 1, b: 1, a: 1}
   _fogStart: 0
   _fogEnd: 49.8
   _fogIntensity: 0.08
+  _intensity: 1
+  _threshold: 0.63
+  _softThreshold: 0.5
+  _iterations: 6
 --- !u!1001 &59469058
 PrefabInstance:
   m_ObjectHideFlags: 0
