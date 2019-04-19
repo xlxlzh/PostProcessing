@@ -471,7 +471,7 @@ MonoBehaviour:
   _intensity: 1
   _threshold: 0.63
   _softThreshold: 0.5
-  _iterations: 6
+  _iterations: 4
 --- !u!1001 &59469058
 PrefabInstance:
   m_ObjectHideFlags: 0

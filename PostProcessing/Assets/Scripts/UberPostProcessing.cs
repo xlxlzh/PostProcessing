@@ -40,7 +40,10 @@ public class UberPostProcessing : PostProcessingBase
     private Shader _bloomShader;
     private Material _bloomMaterial;
     private Material _uberMaterial;
-    private RenderTexture[] _textures = new RenderTexture[16];
+
+    const int MAX_BLUR = 16;
+    private RenderTexture[] _texturesDown = new RenderTexture[MAX_BLUR];
+    private RenderTexture[] _texturesUp = new RenderTexture[MAX_BLUR];
 
     private void OnEnable()
     {
@@ -133,12 +136,11 @@ public class UberPostProcessing : PostProcessingBase
         RenderTextureFormat fmt = source.format;
 
         //Down Samples
-        RenderTexture currentDestination = _textures[0] = RenderTexture.GetTemporary(width, height, 0, fmt);
-        Graphics.Blit(source, currentDestination, _bloomMaterial, 0);
+        var prefiltered = RenderTexture.GetTemporary(width, height, 0, fmt);
+        Graphics.Blit(source, prefiltered, _bloomMaterial, 0);
 
-        RenderTexture currentSource = currentDestination;
-        int index = 1;
-        for(; index < _iterations; ++index)
+        var last = prefiltered;
+        for(int index = 0; index < _iterations; ++index)
         {
             width /= 2;
             height /= 2;
@@ -146,23 +148,41 @@ public class UberPostProcessing : PostProcessingBase
             if (height < 2)
                 break;
 
-            currentDestination = _textures[index] = RenderTexture.GetTemporary(width, height, 0, fmt);
-            Graphics.Blit(currentSource, currentDestination, _bloomMaterial, 1);
-            currentSource = currentDestination;
+            _texturesDown[index] = RenderTexture.GetTemporary(width, height, 0, fmt);
+
+            Graphics.Blit(last, _texturesDown[index], _bloomMaterial, 1);
+            last = _texturesDown[index];
         }
 
         //Up Samples
-        for (index -=2; index >= 0; --index)
+        for (int index = _iterations - 2; index >= 0; --index)
         {
-            currentDestination = _textures[index];
-            _textures[index] = null;
-            Graphics.Blit(currentSource, currentDestination, _bloomMaterial, 2);
-            RenderTexture.ReleaseTemporary(currentSource);
-            currentSource = currentDestination;
+            var baseTex = _texturesDown[index];
+
+            _bloomMaterial.SetTexture("_SourceTex", baseTex);
+            _texturesUp[index] = RenderTexture.GetTemporary(baseTex.width, baseTex.height, 0, fmt);
+            Graphics.Blit(last, _texturesUp[index], _bloomMaterial, 2);
+            last = _texturesUp[index];
         }
 
-        Shader.SetGlobalTexture("_SourceTex", source);
+        var bloomTex = last;
 
-        Graphics.Blit(source, destination, _bloomMaterial, 3);
+        for (int i = 0; i < _iterations; i++)
+        {
+            if (_texturesDown[i] != null)
+                RenderTexture.ReleaseTemporary(_texturesDown[i]);
+
+            if (_texturesUp[i] != null && _texturesUp[i] != bloomTex)
+                RenderTexture.ReleaseTemporary(_texturesUp[i]);
+
+            _texturesUp[i] = null;
+            _texturesDown[i] = null;
+        }
+
+        RenderTexture.ReleaseTemporary(prefiltered);
+
+        _uberMaterial.SetTexture("_BloomTex", bloomTex);
+
+        Graphics.Blit(source, destination, _uberMaterial, 0);
     }
 }

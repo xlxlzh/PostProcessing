@@ -8,6 +8,7 @@
     CGINCLUDE
     
     #include "UnityCG.cginc"
+    #include "../Bloom.cginc"
 
     sampler2D _MainTex;
     sampler2D _SourceTex;
@@ -69,7 +70,8 @@
 
             half4 frag (v2f i) : SV_Target
             {
-                return half4(Prefilter(BoxFilter(i.uv, 1.0)), 1.0);
+                half4 c = tex2D(_MainTex, i.uv);
+                return half4(Prefilter(c), 1.0);
             }
 
             ENDCG
@@ -83,23 +85,7 @@
 
             half4 frag (v2f i) : SV_Target
             {
-                return half4(BoxFilter(i.uv, 1.0), 1.0);
-            }
-
-            ENDCG
-        }
-
-        Pass
-        {
-            Blend One One
-
-            CGPROGRAM
-            #pragma vertex vert
-            #pragma fragment frag
-
-            half4 frag (v2f i) : SV_Target
-            {
-                return half4(BoxFilter(i.uv, 0.5), 1.0);
+                return half4(BoxFilter(_MainTex, i.uv, _MainTex_TexelSize.xy), 1.0);
             }
 
             ENDCG
@@ -114,7 +100,7 @@
             half4 frag (v2f i) : SV_Target
             {
                 half4 c = tex2D(_SourceTex, i.uv);
-                c.rgb += _Intensity * BoxFilter(i.uv, 0.5);
+                c.rgb += _Intensity * BoxFilter(_MainTex, i.uv, _MainTex_TexelSize.xy);
                 return c;
             }
 
