@@ -184,5 +184,7 @@ public class UberPostProcessing : PostProcessingBase
         _uberMaterial.SetTexture("_BloomTex", bloomTex);
 
         Graphics.Blit(source, destination, _uberMaterial, 0);
+
+        RenderTexture.ReleaseTemporary(bloomTex);
     }
 }

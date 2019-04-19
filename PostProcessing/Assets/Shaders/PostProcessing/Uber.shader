@@ -19,6 +19,7 @@
             #include "../EdgeDectection.cginc"
             #include "../CommonFunc.cginc"
             #include "../Fog.cginc"
+            #include "../Bloom.cginc"
 
             #pragma shader_feature _ EDGE_DECTECTION
             #pragma shader_feature _ POSTPROCESSING_FOG_LINEAR POSTPROCESSING_FOG_EXP POSTPROCESSING_FOG_EXP2
@@ -66,6 +67,8 @@
             }
 
             sampler2D _MainTex;
+            sampler2D _BloomTex;
+            float4 _BloomTex_TexelSize;
             UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 
             float4 _EdgeColor;
@@ -82,6 +85,8 @@
                 uv = i.uv;
                 float4 col = tex2D(_MainTex, uv);
 #endif
+                float3 bloomColor = BoxFilter(_BloomTex, i.uv, _BloomTex_TexelSize.xy);
+                col.rgb += bloomColor;
 
 #if (POSTPROCESSING_FOG_LINEAR) || (POSTPROCESSING_FOG_EXP) || (POSTPROCESSING_FOG_EXP2)
                 float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
