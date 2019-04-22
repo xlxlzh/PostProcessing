@@ -24,6 +24,8 @@ public class UberPostProcessing : PostProcessingBase
     public float _fogIntensity = 1.0f;
 
     [Header("Bloom")]
+    public bool _enableBloomEffect = false;
+
     [Range(0, 10)]
     public float _intensity = 1;
 
@@ -44,18 +46,19 @@ public class UberPostProcessing : PostProcessingBase
     const int MAX_BLUR = 16;
     private RenderTexture[] _texturesDown = new RenderTexture[MAX_BLUR];
     private RenderTexture[] _texturesUp = new RenderTexture[MAX_BLUR];
+    private RenderTexture _bloomTex = null;
 
     private void OnEnable()
     {
         InitShaders();
     }
 
-    private void ChangeKeywords(string name, bool value)
+    private void ChangeKeywords(Material mat, string name, bool value)
     {
         if (value)
-            Shader.EnableKeyword(name);
+            mat.EnableKeyword(name);
         else
-            Shader.DisableKeyword(name);
+            mat.DisableKeyword(name);
     }
 
     private void InitShaders()
@@ -75,31 +78,31 @@ public class UberPostProcessing : PostProcessingBase
         Shader.SetGlobalVector("_FogParams", new Vector4(_fogStart, _fogEnd, _fogIntensity, 0.0f));
 
 
-        ChangeKeywords("POSTPROCESSING_FOG_LINEAR", false);
-        ChangeKeywords("POSTPROCESSING_FOG_EXP", false);
-        ChangeKeywords("POSTPROCESSING_FOG_EXP2", false);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
 
         switch (_fogMode)
         {
             case FogMode.Fog_None:
-                ChangeKeywords("POSTPROCESSING_FOG_LINEAR", false);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP", false);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP2", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
                 break;
             case FogMode.Fog_Linear:
-                ChangeKeywords("POSTPROCESSING_FOG_LINEAR", true);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP", false);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP2", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", true);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
                 break;
             case FogMode.Fog_EXP2:
-                ChangeKeywords("POSTPROCESSING_FOG_LINEAR", false);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP", false);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP2", true);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", true);
                 break;
             case FogMode.Fog_EXP:
-                ChangeKeywords("POSTPROCESSING_FOG_LINEAR", false);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP", true);
-                ChangeKeywords("POSTPROCESSING_FOG_EXP2", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", true);
+                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
                 break;
         }
     }
@@ -112,16 +115,15 @@ public class UberPostProcessing : PostProcessingBase
         _uberMaterial = CheckShaderAndCreateMaterial(_uberShader, _uberMaterial);
         _bloomMaterial = CheckShaderAndCreateMaterial(_bloomShader, _bloomMaterial);
 
-        Shader.SetGlobalColor("_EdgeColor", _edgeColor);
-        ChangeKeywords("EDGE_DECTECTION", _enableEdgeDectection);
+        _uberMaterial.SetColor("_EdgeColor", _edgeColor);
+        ChangeKeywords(_uberMaterial, "EDGE_DECTECTION", _enableEdgeDectection);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_BLOOM", _enableBloomEffect);
 
         SetFogModeAndConstants();
     }
 
-    public void OnRenderImage(RenderTexture source, RenderTexture destination)
+    void RenderBloomTex(RenderTexture source, RenderTexture destination)
     {
-        PrepareMaterial();
-
         float knee = _threshold * _softThreshold;
         Vector4 filter;
         filter.x = _threshold;
@@ -140,7 +142,7 @@ public class UberPostProcessing : PostProcessingBase
         Graphics.Blit(source, prefiltered, _bloomMaterial, 0);
 
         var last = prefiltered;
-        for(int index = 0; index < _iterations; ++index)
+        for (int index = 0; index < _iterations; ++index)
         {
             width /= 2;
             height /= 2;
@@ -165,14 +167,14 @@ public class UberPostProcessing : PostProcessingBase
             last = _texturesUp[index];
         }
 
-        var bloomTex = last;
+        _bloomTex = last;
 
         for (int i = 0; i < _iterations; i++)
         {
             if (_texturesDown[i] != null)
                 RenderTexture.ReleaseTemporary(_texturesDown[i]);
 
-            if (_texturesUp[i] != null && _texturesUp[i] != bloomTex)
+            if (_texturesUp[i] != null && _texturesUp[i] != _bloomTex)
                 RenderTexture.ReleaseTemporary(_texturesUp[i]);
 
             _texturesUp[i] = null;
@@ -181,10 +183,18 @@ public class UberPostProcessing : PostProcessingBase
 
         RenderTexture.ReleaseTemporary(prefiltered);
 
-        _uberMaterial.SetTexture("_BloomTex", bloomTex);
+        _uberMaterial.SetTexture("_BloomTex", _bloomTex);
+    }
+
+    public void OnRenderImage(RenderTexture source, RenderTexture destination)
+    {
+        PrepareMaterial();
+
+        if (_enableBloomEffect)
+            RenderBloomTex(source, destination);
 
         Graphics.Blit(source, destination, _uberMaterial, 0);
 
-        RenderTexture.ReleaseTemporary(bloomTex);
+        RenderTexture.ReleaseTemporary(_bloomTex);
     }
 }

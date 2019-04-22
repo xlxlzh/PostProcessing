@@ -23,6 +23,7 @@
 
             #pragma shader_feature _ EDGE_DECTECTION
             #pragma shader_feature _ POSTPROCESSING_FOG_LINEAR POSTPROCESSING_FOG_EXP POSTPROCESSING_FOG_EXP2
+            #pragma shader_feature _ POSTPROCESSING_BLOOM
 
             struct appdata
             {
@@ -85,8 +86,11 @@
                 uv = i.uv;
                 float4 col = tex2D(_MainTex, uv);
 #endif
+
+#ifdef POSTPROCESSING_BLOOM
                 float3 bloomColor = BoxFilter(_BloomTex, uv, _BloomTex_TexelSize.xy);
                 col.rgb += bloomColor;
+#endif
 
 #if (POSTPROCESSING_FOG_LINEAR) || (POSTPROCESSING_FOG_EXP) || (POSTPROCESSING_FOG_EXP2)
                 float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, uv);
