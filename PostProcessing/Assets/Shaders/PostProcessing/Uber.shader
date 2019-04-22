@@ -85,7 +85,7 @@
                 uv = i.uv;
                 float4 col = tex2D(_MainTex, uv);
 #endif
-                float3 bloomColor = BoxFilter(_BloomTex, i.uv, _BloomTex_TexelSize.xy);
+                float3 bloomColor = BoxFilter(_BloomTex, uv, _BloomTex_TexelSize.xy);
                 col.rgb += bloomColor;
 
 #if (POSTPROCESSING_FOG_LINEAR) || (POSTPROCESSING_FOG_EXP) || (POSTPROCESSING_FOG_EXP2)
