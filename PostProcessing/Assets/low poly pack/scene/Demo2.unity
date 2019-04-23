@@ -463,7 +463,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _enableEdgeDectection: 0
   _edgeColor: {r: 0, g: 0, b: 0, a: 0}
-  _fogMode: 1
+  _fogMode: 3
   _fogColor: {r: 1, g: 1, b: 1, a: 1}
   _fogStart: 0
   _fogEnd: 49.8
@@ -473,6 +473,13 @@ MonoBehaviour:
   _threshold: 0.63
   _softThreshold: 0.5
   _iterations: 4
+  _vignetteMode: 1
+  _vignetteColor: {r: 0, g: 0, b: 0, a: 1}
+  _vignetteCenter: {x: 0.5, y: 0.5}
+  _vignetteIntensity: 1
+  _vignetteSmoothness: 1
+  _vignetteRoundness: 0
+  _vignetteRounded: 0
 --- !u!1001 &59469058
 PrefabInstance:
   m_ObjectHideFlags: 0

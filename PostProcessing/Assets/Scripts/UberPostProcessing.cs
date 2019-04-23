@@ -11,7 +11,15 @@ public class UberPostProcessing : PostProcessingBase
         Fog_EXP,
         Fog_EXP2
     }
-    
+
+    public enum VignetteMode
+    {
+        Vignette_None,
+        Vignette_Classic,
+        Vignette_Mask
+    }
+
+
     [Header("Edge Dectection")]
     public bool _enableEdgeDectection = false;
     public Color _edgeColor = Color.black;
@@ -48,6 +56,19 @@ public class UberPostProcessing : PostProcessingBase
     private RenderTexture[] _texturesUp = new RenderTexture[MAX_BLUR];
     private RenderTexture _bloomTex = null;
 
+    [Header("Vignette")]
+    public VignetteMode _vignetteMode = VignetteMode.Vignette_None;
+    public Color _vignetteColor = Color.black;
+    public Vector2 _vignetteCenter = new Vector2(0.5f, 0.5f);
+
+    [Range(0.0f, 1.0f)]
+    public float _vignetteIntensity = 1.0f;
+    [Range(0.01f, 1.0f)]
+    public float _vignetteSmoothness = 1.0f;
+    [Range(0.0f, 1.0f)]
+    public float _vignetteRoundness = 0.0f;
+    public bool _vignetteRounded = false;
+
     private void OnEnable()
     {
         InitShaders();
@@ -72,39 +93,18 @@ public class UberPostProcessing : PostProcessingBase
         return false;
     }
 
-    private void SetFogModeAndConstants()
+    private void PrepareFog()
     {
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", _fogMode == FogMode.Fog_Linear);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", _fogMode == FogMode.Fog_EXP);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", _fogMode == FogMode.Fog_EXP2);
+
+        if (_fogMode == FogMode.Fog_None)
+            return;
+
         Shader.SetGlobalColor("_FogColor", _fogColor);
         Shader.SetGlobalVector("_FogParams", new Vector4(_fogStart, _fogEnd, _fogIntensity, 0.0f));
 
-
-        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
-        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
-        ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
-
-        switch (_fogMode)
-        {
-            case FogMode.Fog_None:
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
-                break;
-            case FogMode.Fog_Linear:
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", true);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
-                break;
-            case FogMode.Fog_EXP2:
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", false);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", true);
-                break;
-            case FogMode.Fog_EXP:
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_LINEAR", false);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP", true);
-                ChangeKeywords(_uberMaterial, "POSTPROCESSING_FOG_EXP2", false);
-                break;
-        }
     }
 
     private void PrepareMaterial()
@@ -119,7 +119,30 @@ public class UberPostProcessing : PostProcessingBase
         ChangeKeywords(_uberMaterial, "EDGE_DECTECTION", _enableEdgeDectection);
         ChangeKeywords(_uberMaterial, "POSTPROCESSING_BLOOM", _enableBloomEffect);
 
-        SetFogModeAndConstants();
+        PrepareVignette();
+        PrepareFog();
+    }
+
+    private void PrepareVignette()
+    {
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_VIGNETTE_CLASSIC", _vignetteMode == VignetteMode.Vignette_Classic);
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_VIGNETTE_MASK", _vignetteMode == VignetteMode.Vignette_Mask);
+
+        if (_vignetteMode == VignetteMode.Vignette_None)
+            return;
+
+        _uberMaterial.SetColor("_Vignette_Color", _vignetteColor);
+
+        if (_vignetteMode == VignetteMode.Vignette_Classic)
+        {
+            _uberMaterial.SetVector("_Vignette_Center", _vignetteCenter);
+            float roundness = (1.0f - _vignetteRoundness) * 6.0f + _vignetteRoundness;
+            _uberMaterial.SetVector("_Vignette_Settings", new Vector4(_vignetteIntensity * 3.0f, _vignetteSmoothness * 5.0f, roundness, _vignetteRounded ? 1.0f : 0.0f));
+        }
+        else if (_vignetteMode == VignetteMode.Vignette_Mask)
+        {
+
+        }
     }
 
     void RenderBloomTex(RenderTexture source, RenderTexture destination)
