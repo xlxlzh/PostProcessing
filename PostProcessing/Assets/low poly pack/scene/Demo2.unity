@@ -480,6 +480,8 @@ MonoBehaviour:
   _vignetteSmoothness: 1
   _vignetteRoundness: 0
   _vignetteRounded: 0
+  _vignetteMask: {fileID: 0}
+  _vignetteOpacity: 0
 --- !u!1001 &59469058
 PrefabInstance:
   m_ObjectHideFlags: 0

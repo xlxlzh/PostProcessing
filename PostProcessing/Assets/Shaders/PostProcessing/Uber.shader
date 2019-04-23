@@ -76,6 +76,8 @@
             half3 _Vignette_Color;
             half2 _Vignette_Center;
             half4 _Vignette_Settings;
+            sampler2D _Vignette_Mask;
+            half _Vignette_Opacity;
 
             UNITY_DECLARE_DEPTH_TEXTURE(_CameraDepthTexture);
 
@@ -114,7 +116,9 @@
                 half vfactor = pow(saturate(1.0 - dot(d, d)), _Vignette_Settings.y);
                 col.rgb *= lerp(_Vignette_Color, (1.0).xxx, vfactor);
 #elif POSTPROCESSING_VIGNETTE_MASK
-                //TODO
+                half vfactor = tex2D(_Vignette_Mask, i.uv);
+                half3 blendColor = col.rgb * lerp(_Vignette_Color, (1.0).xxx, vfactor);
+                col.rgb = lerp(col.rgb, blendColor, _Vignette_Opacity);
 #endif
                 return col;
             }

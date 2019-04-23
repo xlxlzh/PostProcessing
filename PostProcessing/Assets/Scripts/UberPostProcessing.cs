@@ -69,6 +69,10 @@ public class UberPostProcessing : PostProcessingBase
     public float _vignetteRoundness = 0.0f;
     public bool _vignetteRounded = false;
 
+    public Texture _vignetteMask;
+    [Range(0.0f, 1.0f)]
+    public float _vignetteOpacity;
+
     private void OnEnable()
     {
         InitShaders();
@@ -126,7 +130,9 @@ public class UberPostProcessing : PostProcessingBase
     private void PrepareVignette()
     {
         ChangeKeywords(_uberMaterial, "POSTPROCESSING_VIGNETTE_CLASSIC", _vignetteMode == VignetteMode.Vignette_Classic);
-        ChangeKeywords(_uberMaterial, "POSTPROCESSING_VIGNETTE_MASK", _vignetteMode == VignetteMode.Vignette_Mask);
+
+        bool maskEnable = _vignetteMode == VignetteMode.Vignette_Mask && _vignetteMask != null && _vignetteOpacity > 0;
+        ChangeKeywords(_uberMaterial, "POSTPROCESSING_VIGNETTE_MASK", maskEnable);
 
         if (_vignetteMode == VignetteMode.Vignette_None)
             return;
@@ -139,9 +145,10 @@ public class UberPostProcessing : PostProcessingBase
             float roundness = (1.0f - _vignetteRoundness) * 6.0f + _vignetteRoundness;
             _uberMaterial.SetVector("_Vignette_Settings", new Vector4(_vignetteIntensity * 3.0f, _vignetteSmoothness * 5.0f, roundness, _vignetteRounded ? 1.0f : 0.0f));
         }
-        else if (_vignetteMode == VignetteMode.Vignette_Mask)
+        else if (maskEnable)
         {
-
+            _uberMaterial.SetTexture("_Vignette_Mask", _vignetteMask);
+            _uberMaterial.SetFloat("_Vignette_Opacity", _vignetteOpacity);
         }
     }
 
